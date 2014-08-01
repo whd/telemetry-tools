@@ -1,0 +1,12 @@
+*.pyc
+*.gz
+*.bz2
+*.xz
+*.lzma
+*.swp
+*.swo
+*.out
+*.o
+*~
+histogram_tools.py
+.DS_Store
