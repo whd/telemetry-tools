@@ -131,19 +131,13 @@ class TelemetrySchema:
 
 if __name__ == "__main__":
     import json
-    import argparse
+    import sys
 
-    parser = argparse.ArgumentParser(description="Return a json representation of the file's dimensions.",
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    if len(sys.argv) != 3:
+        sys.stderr.write("Usage: telemetry_schema.py schema.json s3_filename")
+        sys.exit(-1)
 
-    parser.add_argument("-d", "--dirs-only", help="Directories onlye", dest="dirs_only", action="store_true")
-    parser.add_argument("-s", "--schema", help="Schema definition file", required=True)
-    parser.add_argument("-f", "--filename", help="Filename", required=True)
-
-    parser.set_defaults(dirs_only=False)
-    args = parser.parse_args()
-
-    schema_string = json.load(open(args.schema, "r"))
+    schema_string = json.load(open(sys.argv[1], "r"))
     schema = TelemetrySchema(schema_string)
-    dims = schema.get_dimension_map(schema.get_dimensions(".", args.filename, dirs_only=args.dirs_only))
+    dims = schema.get_dimension_map(schema.get_dimensions(".", sys.argv[2]))
     print(json.dumps(dims))
