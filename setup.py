@@ -1,7 +1,8 @@
 from distutils.core import setup
+
 setup(name='telemetry-tools',
       description='Utility code to work with Mozilla Telemetry data.',
-      version='1.0',
+      version='1.0.1',
       author='Mozilla',
       url='https://github.com/mozilla/telemetry-tools',
       packages=['telemetry', 'telemetry.util'],
