@@ -18,9 +18,6 @@ class BacktrackableFile:
         self._stream = stream
         self._buffer = StringIO()
 
-    def _read_buffer(self, size):
-        return self._buffer.read(size)
-
     def read(self, size):
         buffer_data = self._buffer.read(size)
         to_read = size - len(buffer_data)
