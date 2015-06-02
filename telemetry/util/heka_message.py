@@ -9,8 +9,39 @@ import message_pb2  # generated from https://github.com/mozilla-services/heka (m
 import struct
 import gzip
 
-from StringIO import StringIO
+from cStringIO import StringIO
 from google.protobuf.message import DecodeError
+
+
+class BacktrackableFile:
+    def __init__(self, stream):
+        self._stream = stream
+        self._buffer = StringIO()
+
+    def _read_buffer(self, size):
+        return self._buffer.read(size)
+
+    def read(self, size):
+        buffer_data = self._buffer.read(size)
+        to_read = size - len(buffer_data)
+
+        if to_read == 0:
+            return buffer_data
+
+        stream_data = self._stream.read(to_read)
+        self._buffer.write(stream_data)
+
+        return buffer_data + stream_data
+
+    def close(self, *args):
+        self._buffer.close()
+        self._stream.close(*args)
+
+    def backtrack(self):
+        skipped, eof = read_until_next(self._buffer)
+
+        if not eof:
+            self.seek(skipped)
 
 
 class UnpackedRecord():
@@ -115,7 +146,7 @@ def unpack_string(string, **kwargs):
     return unpack(StringIO(string), **kwargs)
 
 
-def unpack(fin, raw=False, verbose=False, strict=False, retry=False):
+def unpack(fin, raw=False, verbose=False, strict=False, backtrack=False):
     record_count = 0
     bad_records = 0
     total_bytes = 0
@@ -127,11 +158,13 @@ def unpack(fin, raw=False, verbose=False, strict=False, retry=False):
 
         except Exception as e:
             if strict:
+                fin.close()
                 raise e
             elif verbose:
                 print e
 
-            if retry and type(e) == DecodeError:
+            if backtrack and type(e) == DecodeError:
+                fin.backtrack()
                 continue
 
         if r is None:
@@ -147,4 +180,5 @@ def unpack(fin, raw=False, verbose=False, strict=False, retry=False):
 
     if verbose:
         print "Processed", record_count, "records"
+
     fin.close()
