@@ -10,6 +10,7 @@ import struct
 import gzip
 
 from StringIO import StringIO
+from google.protobuf.message import DecodeError
 
 
 class UnpackedRecord():
@@ -98,7 +99,7 @@ def read_one_record(input_stream, raw=False, verbose=False, strict=False):
         message = message_pb2.Message()
         message.ParseFromString(message_raw)
 
-    return UnpackedRecord(raw_record, header, message)
+    return UnpackedRecord(raw_record, header, message), total_bytes
 
 
 def unpack_file(filename, **kwargs):
@@ -114,27 +115,35 @@ def unpack_string(string, **kwargs):
     return unpack(StringIO(string), **kwargs)
 
 
-def unpack(fin, raw=False, verbose=False, strict=False):
+def unpack(fin, raw=False, verbose=False, strict=False, retry=False):
     record_count = 0
     bad_records = 0
     total_bytes = 0
+
     while True:
         r = None
         try:
-            r = read_one_record(fin, raw, verbose, strict)
-        except ValueError as e:
+            r, bytes = read_one_record(fin, raw, verbose, strict)
+
+        except Exception as e:
             if strict:
                 raise e
             elif verbose:
                 print e
+
+            if retry and type(e) == DecodeError:
+                continue
+
         if r is None:
             break
 
         if verbose and r.error is not None:
             print r.error
+
         record_count += 1
-        total_bytes += len(r.raw)
-        yield r
+        total_bytes += bytes
+
+        yield r, total_bytes
 
     if verbose:
         print "Processed", record_count, "records"
