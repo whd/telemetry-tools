@@ -6,6 +6,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import message_pb2  # generated from https://github.com/mozilla-services/heka (message/message.proto)
+import boto
 import struct
 import gzip
 
@@ -30,9 +31,12 @@ class BacktrackableFile:
 
         return buffer_data + stream_data
 
-    def close(self, *args):
+    def close(self):
         self._buffer.close()
-        self._stream.close(*args)
+        if type(self._stream) == boto.s3.key.Key:
+            self._stream.close(True)
+        else:
+            self._stream.close()
 
     def backtrack(self):
         skipped, eof = read_until_next(self._buffer)
