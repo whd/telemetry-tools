@@ -14,6 +14,9 @@ from cStringIO import StringIO
 from google.protobuf.message import DecodeError
 
 
+_record_separator = 0x1e
+
+
 class BacktrackableFile:
     def __init__(self, stream):
         self._stream = stream
@@ -39,10 +42,13 @@ class BacktrackableFile:
             self._stream.close()
 
     def backtrack(self):
-        skipped, eof = read_until_next(self._buffer)
+        buffer = self._buffer.getvalue()
+        index = buffer.find(chr(_record_separator), 1)
 
-        if not eof:
-            self.seek(skipped)
+        self._buffer = StringIO()
+        if index >= 0:
+            self._buffer.write(buffer[index:])
+            self._buffer.seek(0)
 
 
 class UnpackedRecord():
@@ -54,7 +60,7 @@ class UnpackedRecord():
 
 
 # Returns (bytes_skipped=int, eof_reached=bool)
-def read_until_next(fin, separator=0x1e):
+def read_until_next(fin, separator=_record_separator):
     bytes_skipped = 0
     while True:
         c = fin.read(1)
@@ -183,3 +189,24 @@ def unpack(fin, raw=False, verbose=False, strict=False, backtrack=False):
         print "Processed", record_count, "records"
 
     fin.close()
+
+
+if __name__ == "__main__":
+    # Test backtracking when the separator appears at the first character
+    w = BacktrackableFile(StringIO("\x1eFOOBAR"))
+    assert(w.read(5) == "\x1eFOOB")
+    w.backtrack()
+    assert(w.read(5) == "AR")
+
+    # Test backtracking when separator was read
+    w = BacktrackableFile(StringIO("FOOBAR\x1eFOOBAR"))
+    assert(w.read(10) == "FOOBAR\x1eFOO")
+    w.backtrack()
+    assert(w.read(10) == "\x1eFOOBAR")
+
+    # Test backtracking when separator wasn't read
+    w = BacktrackableFile(StringIO("FOOBAR\x1eFOOBAR"))
+    assert(w.read(5) == "FOOBA")
+    w.backtrack()
+    assert(w.read(5) == "R\x1eFOO")
+    assert(w.read(5) == "BAR")
