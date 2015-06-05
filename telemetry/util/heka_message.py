@@ -37,6 +37,9 @@ class BacktrackableFile:
     def close(self):
         self._buffer.close()
         if type(self._stream) == boto.s3.key.Key:
+            if self._stream.resp:  # Hack! Connections are kept around otherwise!
+                self._stream.resp.close()
+
             self._stream.close(True)
         else:
             self._stream.close()
