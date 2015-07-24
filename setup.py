@@ -14,4 +14,5 @@ setup(name='telemetry-tools',
                      "Operating System :: OS Independent",
                      "Topic :: Internet",
                      "Programming Language :: Python :: 2.7"],
+      install_requires=['boto','protobuf','python-snappy','simplejson'],
       )
