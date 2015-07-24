@@ -85,7 +85,7 @@ def read_one_record(input_stream, raw=False, verbose=False, strict=False, try_sn
     skipped, eof = read_until_next(input_stream, 0x1e)
     total_bytes += skipped
     if eof:
-        return None
+        return None, total_bytes
     else:
         # we've read one separator (plus anything we skipped)
         total_bytes += 1
@@ -101,7 +101,7 @@ def read_one_record(input_stream, raw=False, verbose=False, strict=False, try_sn
     # Read the header length
     header_length_raw = input_stream.read(1)
     if header_length_raw == '':
-        return None
+        return None, total_bytes
 
     total_bytes += 1
     raw_record += header_length_raw
@@ -113,7 +113,7 @@ def read_one_record(input_stream, raw=False, verbose=False, strict=False, try_sn
 
     header_raw = input_stream.read(header_length)
     if header_raw == '':
-        return None
+        return None, total_bytes
     total_bytes += header_length
     raw_record += header_raw
 
@@ -127,7 +127,7 @@ def read_one_record(input_stream, raw=False, verbose=False, strict=False, try_sn
                 ord(unit_separator[0]))
         if strict:
             raise ValueError(error_msg)
-        return UnpackedRecord(raw_record, header, error=error_msg)
+        return UnpackedRecord(raw_record, header, error=error_msg), total_bytes
     raw_record += unit_separator
 
     #print "message length:", header.message_length

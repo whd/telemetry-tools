@@ -35,6 +35,23 @@ class TestHekaMessage(unittest.TestCase):
                     pass
                 self.assertEqual(expected_counts[t], count)
 
+    def test_unpack_strict(self):
+        expected_exceptions = {"plain": False, "snappy": True, "mixed": True}
+        for t in expected_exceptions.keys():
+            count = 0
+            filename = "test/test_{}.heka".format(t)
+            threw = False
+            got_err = False
+            with open(filename, "rb") as o:
+                try:
+                    for r, b in hm.unpack(o, strict=True, try_snappy=False):
+                        if r.error is not None:
+                            got_err = True
+                        count += 1
+                except Exception as e:
+                    threw = True
+            self.assertEquals(expected_exceptions[t], threw)
+
     def test_backtracking_with_initial_separator(self):
         # Test backtracking when the separator appears at the first character
         w = hm.BacktrackableFile(StringIO("\x1eFOOBAR"))
