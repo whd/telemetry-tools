@@ -16,10 +16,11 @@ class TestHekaMessage(unittest.TestCase):
             filename = "test/test_{}.heka".format(t)
             with open(filename, "rb") as o:
                 msg = 0
-                for r, b in hm.unpack(o):
+                for r, b in hm.unpack(o, try_snappy=True):
                     j = json.loads(r.message.payload)
                     self.assertEqual(msg, j["seq"])
                     msg += 1
+                self.assertEqual(10, msg)
 
     def test_unpack_nosnappy(self):
         expected_counts = {"plain": 10, "snappy": 0, "mixed": 5}
