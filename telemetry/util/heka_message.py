@@ -7,6 +7,7 @@
 
 import message_pb2  # generated from https://github.com/mozilla-services/heka (message/message.proto)
 import boto
+import snappy
 import struct
 import gzip
 
@@ -78,13 +79,13 @@ def read_until_next(fin, separator=_record_separator):
 
 # Stream Framing:
 #  https://hekad.readthedocs.org/en/latest/message/index.html
-def read_one_record(input_stream, raw=False, verbose=False, strict=False):
+def read_one_record(input_stream, raw=False, verbose=False, strict=False, try_snappy=True):
     # Read 1 byte record separator (and keep reading until we get one)
     total_bytes = 0
     skipped, eof = read_until_next(input_stream, 0x1e)
     total_bytes += skipped
     if eof:
-        return None
+        return None, total_bytes
     else:
         # we've read one separator (plus anything we skipped)
         total_bytes += 1
@@ -100,7 +101,7 @@ def read_one_record(input_stream, raw=False, verbose=False, strict=False):
     # Read the header length
     header_length_raw = input_stream.read(1)
     if header_length_raw == '':
-        return None
+        return None, total_bytes
 
     total_bytes += 1
     raw_record += header_length_raw
@@ -112,7 +113,7 @@ def read_one_record(input_stream, raw=False, verbose=False, strict=False):
 
     header_raw = input_stream.read(header_length)
     if header_raw == '':
-        return None
+        return None, total_bytes
     total_bytes += header_length
     raw_record += header_raw
 
@@ -126,7 +127,7 @@ def read_one_record(input_stream, raw=False, verbose=False, strict=False):
                 ord(unit_separator[0]))
         if strict:
             raise ValueError(error_msg)
-        return UnpackedRecord(raw_record, header, error=error_msg)
+        return UnpackedRecord(raw_record, header, error=error_msg), total_bytes
     raw_record += unit_separator
 
     #print "message length:", header.message_length
@@ -138,7 +139,18 @@ def read_one_record(input_stream, raw=False, verbose=False, strict=False):
     message = None
     if not raw:
         message = message_pb2.Message()
-        message.ParseFromString(message_raw)
+        parsed_ok = False
+        if try_snappy:
+            try:
+                message.ParseFromString(snappy.decompress(message_raw))
+                parsed_ok = True
+            except:
+                # Wasn't snappy-compressed
+                pass
+        if not parsed_ok:
+            # Either we didn't want to attempt snappy, or the
+            # data was not snappy-encoded (or it was just bad).
+            message.ParseFromString(message_raw)
 
     return UnpackedRecord(raw_record, header, message), total_bytes
 
@@ -156,7 +168,7 @@ def unpack_string(string, **kwargs):
     return unpack(StringIO(string), **kwargs)
 
 
-def unpack(fin, raw=False, verbose=False, strict=False, backtrack=False):
+def unpack(fin, raw=False, verbose=False, strict=False, backtrack=False, try_snappy=False):
     record_count = 0
     bad_records = 0
     total_bytes = 0
@@ -164,8 +176,7 @@ def unpack(fin, raw=False, verbose=False, strict=False, backtrack=False):
     while True:
         r = None
         try:
-            r, bytes = read_one_record(fin, raw, verbose, strict)
-
+            r, bytes = read_one_record(fin, raw, verbose, strict, try_snappy)
         except Exception as e:
             if strict:
                 fin.close()
@@ -192,24 +203,3 @@ def unpack(fin, raw=False, verbose=False, strict=False, backtrack=False):
         print "Processed", record_count, "records"
 
     fin.close()
-
-
-if __name__ == "__main__":
-    # Test backtracking when the separator appears at the first character
-    w = BacktrackableFile(StringIO("\x1eFOOBAR"))
-    assert(w.read(5) == "\x1eFOOB")
-    w.backtrack()
-    assert(w.read(5) == "AR")
-
-    # Test backtracking when separator was read
-    w = BacktrackableFile(StringIO("FOOBAR\x1eFOOBAR"))
-    assert(w.read(10) == "FOOBAR\x1eFOO")
-    w.backtrack()
-    assert(w.read(10) == "\x1eFOOBAR")
-
-    # Test backtracking when separator wasn't read
-    w = BacktrackableFile(StringIO("FOOBAR\x1eFOOBAR"))
-    assert(w.read(5) == "FOOBA")
-    w.backtrack()
-    assert(w.read(5) == "R\x1eFOO")
-    assert(w.read(5) == "BAR")
