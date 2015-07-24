@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(name='telemetry-tools',
       description='Utility code to work with Mozilla Telemetry data.',
-      version='1.0.5',
+      version='1.0.6',
       author='Mozilla',
       url='https://github.com/mozilla/telemetry-tools',
       packages=['telemetry', 'telemetry.util'],
@@ -14,4 +14,5 @@ setup(name='telemetry-tools',
                      "Operating System :: OS Independent",
                      "Topic :: Internet",
                      "Programming Language :: Python :: 2.7"],
+      install_requires=['boto','protobuf','python-snappy','simplejson'],
       )
