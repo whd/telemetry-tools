@@ -108,25 +108,31 @@ def upload_one(args):
     return target, remote_key, err
 
 
-def list_partitions(bucket, prefix='', level=0, schema=None, include_keys=False):
+def list_partitions(bucket, prefix='', level=0, schema=None, include_keys=False, dirs_only=False):
     #print "Listing...", prefix, level
+    num_dimensions = 6 # backwards compatibility for v2 telemetry
     if schema is not None:
         allowed_values = schema.sanitize_allowed_values()
+        num_dimensions = len(allowed_values)
+
     delimiter = '/'
-    if level > 3:
+    if level > (num_dimensions - 3) and not dirs_only:
         delimiter = '.'
     for k in bucket.list(prefix=prefix, delimiter=delimiter):
         partitions = k.name.split("/")
-        if level > 3:
+        if level > (num_dimensions - 3) and not dirs_only:
             # split the last couple of partition components by "." instead of "/"
             partitions.extend(partitions.pop().split(".", 2))
         if schema is None or schema.is_allowed(partitions[level], allowed_values[level]):
-            if level >= 5:
+            if level >= (num_dimensions - 1):
                 if include_keys:
                     for f in bucket.list(prefix=k.name):
                         yield f
                 else:
                     yield k.name
             else:
-                for prefix in list_partitions(bucket, k.name, level + 1, schema, include_keys):
+                for prefix in list_partitions(bucket, k.name, level + 1, schema, include_keys, dirs_only):
                     yield prefix
+
+def list_heka_partitions(bucket, prefix='', level=0, schema=None):
+    return list_partitions(bucket, prefix, level, schema, include_keys=True, dirs_only=True)
