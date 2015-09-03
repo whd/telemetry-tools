@@ -5,8 +5,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import os
-import shutil
 import sys
 import telemetry.util.s3 as s3util
 from telemetry.telemetry_schema import TelemetrySchema
@@ -15,6 +13,12 @@ class FakeKey:
   name = None
   def __init__(self, n):
     self.name = n
+
+  def __str__(self):
+    return self.name
+
+  def __repr__(self):
+    return self.__str__()
 
 class FakeBucket:
   def __init__(self, filenames):
