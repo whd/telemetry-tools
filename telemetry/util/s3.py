@@ -123,7 +123,10 @@ def list_partitions(bucket, prefix='', level=0, schema=None, include_keys=False,
         if level > (num_dimensions - 3) and not dirs_only:
             # split the last couple of partition components by "." instead of "/"
             partitions.extend(partitions.pop().split(".", 2))
-        if schema is None or schema.is_allowed(partitions[level], allowed_values[level]):
+
+        # Always check the last partition against the allowed values. This ensures
+        # we can deal with user-specified prefixes at level 0.
+        if schema is None or schema.is_allowed(partitions[-1], allowed_values[level]):
             if level >= (num_dimensions - 1):
                 if include_keys:
                     for f in bucket.list(prefix=k.name):

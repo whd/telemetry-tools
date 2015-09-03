@@ -66,6 +66,30 @@ v4execbucket = FakeBucket([
   "20150903/20150903114503.387_ip-172-31-16-184",
   ])
 
+v4prefixbucket = FakeBucket([
+  "telemetry-executive-summary-2/20150901/20150901221519.541_ip-172-31-16-184",
+  "telemetry-executive-summary-2/20150901/20150901223019.579_ip-172-31-16-184",
+  "telemetry-executive-summary-2/20150901/20150901224519.623_ip-172-31-16-184",
+  "telemetry-executive-summary-2/20150902/20150902180014.543_ip-172-31-16-184",
+  "telemetry-executive-summary-2/20150902/20150902181514.593_ip-172-31-16-184",
+  "telemetry-executive-summary-2/20150902/20150902183014.640_ip-172-31-16-184",
+  "telemetry-executive-summary-2/20150903/20150903111503.204_ip-172-31-16-184",
+  "telemetry-executive-summary-2/20150903/20150903113003.306_ip-172-31-16-184",
+  "telemetry-executive-summary-2/20150903/20150903114503.387_ip-172-31-16-184",
+  ])
+
+multiprefixbucket = FakeBucket([
+  "a/b/c/d/20150901/20150901221519.541_ip-172-31-16-184",
+  "a/b/c/d/20150901/20150901223019.579_ip-172-31-16-184",
+  "a/b/c/d/20150901/20150901224519.623_ip-172-31-16-184",
+  "a/b/c/d/20150902/20150902180014.543_ip-172-31-16-184",
+  "a/b/c/d/20150902/20150902181514.593_ip-172-31-16-184",
+  "a/b/c/d/20150902/20150902183014.640_ip-172-31-16-184",
+  "a/b/c/d/20150903/20150903111503.204_ip-172-31-16-184",
+  "a/b/c/d/20150903/20150903113003.306_ip-172-31-16-184",
+  "a/b/c/d/20150903/20150903114503.387_ip-172-31-16-184",
+  ])
+
 def test_v2schema():
     schema_spec = {
       "version": 1,
@@ -176,6 +200,28 @@ def test_v4execschema():
     assert("20150901/20150901221519.541_ip-172-31-16-184" in found)
     assert("20150901/20150901223019.579_ip-172-31-16-184" in found)
     assert("20150901/20150901224519.623_ip-172-31-16-184" in found)
+
+    # Test with a prefix:
+    found = set()
+    for f in s3util.list_heka_partitions(v4prefixbucket, prefix="telemetry-executive-summary-2", schema=schema):
+      # print "Found: {}".format(f)
+      found.add(f.name)
+
+    assert(len(found) == 3)
+    assert("telemetry-executive-summary-2/20150901/20150901221519.541_ip-172-31-16-184" in found)
+    assert("telemetry-executive-summary-2/20150901/20150901223019.579_ip-172-31-16-184" in found)
+    assert("telemetry-executive-summary-2/20150901/20150901224519.623_ip-172-31-16-184" in found)
+
+    # Test with a bunch of prefixes:
+    found = set()
+    for f in s3util.list_heka_partitions(multiprefixbucket, prefix="a/b/c/d", schema=schema):
+      # print "Found: {}".format(f)
+      found.add(f.name)
+
+    assert(len(found) == 3)
+    assert("a/b/c/d/20150901/20150901221519.541_ip-172-31-16-184" in found)
+    assert("a/b/c/d/20150901/20150901223019.579_ip-172-31-16-184" in found)
+    assert("a/b/c/d/20150901/20150901224519.623_ip-172-31-16-184" in found)
 
 def main():
     test_v2schema()
