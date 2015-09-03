@@ -119,7 +119,8 @@ def list_partitions(bucket, prefix='', level=0, schema=None, include_keys=False,
     if level > (num_dimensions - 3) and not dirs_only:
         delimiter = '.'
     for k in bucket.list(prefix=prefix, delimiter=delimiter):
-        partitions = k.name.split("/")
+        # Remove empty strings:
+        partitions = filter(None, k.name.split("/"))
         if level > (num_dimensions - 3) and not dirs_only:
             # split the last couple of partition components by "." instead of "/"
             partitions.extend(partitions.pop().split(".", 2))
