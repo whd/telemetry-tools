@@ -31,7 +31,7 @@ class FakeBucket:
         if delimiter is None:
           yield FakeKey(f)
         else:
-          d = f[0:len(prefix)+1] + f[len(prefix) + 1:].split(delimiter)[0]
+          d = f[0:len(prefix)+1] + f[len(prefix) + 1:].split(delimiter)[0] + delimiter
           dirs.add(d)
     if delimiter is None:
       return
