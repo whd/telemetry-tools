@@ -204,7 +204,6 @@ def test_v4execschema():
     # Test with a prefix:
     found = set()
     for f in s3util.list_heka_partitions(v4prefixbucket, prefix="telemetry-executive-summary-2", schema=schema):
-      # print "Found: {}".format(f)
       found.add(f.name)
 
     assert(len(found) == 3)
@@ -215,7 +214,6 @@ def test_v4execschema():
     # Test with a bunch of prefixes:
     found = set()
     for f in s3util.list_heka_partitions(multiprefixbucket, prefix="a/b/c/d", schema=schema):
-      # print "Found: {}".format(f)
       found.add(f.name)
 
     assert(len(found) == 3)
