@@ -14,6 +14,17 @@ from boto.exception import S3ResponseError
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 
+class FakeKey:
+  name = None
+  def __init__(self, n):
+    self.name = n
+
+  def __str__(self):
+    return self.name
+
+  def __repr__(self):
+    return self.__str__()
+
 class Loader:
     def __init__(self, local_path, bucket_name, aws_key=None, aws_secret_key=None, poolsize=10, verbose=False):
         self.verbose = verbose
@@ -109,7 +120,6 @@ def upload_one(args):
 
 
 def list_partitions(bucket, prefix='', level=0, schema=None, include_keys=False, dirs_only=False):
-    #print "Listing...", prefix, level
     num_dimensions = 6 # backwards compatibility for v2 telemetry
     if schema is not None:
         allowed_values = schema.sanitize_allowed_values()
@@ -138,5 +148,57 @@ def list_partitions(bucket, prefix='', level=0, schema=None, include_keys=False,
                 for prefix in list_partitions(bucket, k.name, level + 1, schema, include_keys, dirs_only):
                     yield prefix
 
-def list_heka_partitions(bucket, prefix='', level=0, schema=None):
-    return list_partitions(bucket, prefix, level, schema, include_keys=True, dirs_only=True)
+def is_allowed(value, allowed_values):
+    if allowed_values == "*":
+        return True
+    elif isinstance(allowed_values, list):
+        if value in allowed_values:
+            return True
+    elif isinstance(allowed_values, dict):
+        if "min" in allowed_values and value < allowed_values["min"]:
+            return False
+        if "max" in allowed_values and value > allowed_values["max"]:
+            return False
+        return True
+    # Treat a string the same as a single-element array:
+    elif isinstance(allowed_values, basestring):
+        return value == allowed_values
+    # elif it's a regex, apply the regex.
+    # elif it's a special case (date-in-past, uuid, etc)
+    return False
+
+def _list_prefixes(bucket, prefix='', allowed_values="*"):
+    if isinstance(allowed_values, list):
+        for v in allowed_values:
+            yield FakeKey("{}{}/".format(prefix, v))
+    else:
+        for k in bucket.list(prefix=prefix, delimiter="/"):
+            # Remove empty strings:
+            partitions = filter(None, k.name.split("/"))
+            if is_allowed(partitions[-1], allowed_values):
+                yield k
+
+def _list_files(bucket, prefix):
+    for k in bucket.list(prefix=prefix):
+        yield k
+
+
+def list_heka_partitions(bucket, schema, prefix=''):
+    if schema is None:
+        raise ValueError("'schema' cannot be None")
+
+    allowed_values = schema.sanitize_allowed_values()
+    num_dimensions = len(allowed_values)
+
+    # Bootstrap the list with the top-level prefix
+    to_check = [(prefix, 0)]
+    while len(to_check) > 0:
+        prefix, level = to_check.pop(0)
+        if level >= num_dimensions:
+            # It was the last dimension, list files
+            for f in _list_files(bucket, prefix):
+                yield f
+        else:
+            # It was not the last dimension, list more prefixes
+            for p in _list_prefixes(bucket, prefix, allowed_values[level]):
+                to_check.append((p.name, level + 1))
