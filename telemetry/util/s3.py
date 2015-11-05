@@ -13,6 +13,7 @@ import telemetry.util.files as fu
 from boto.exception import S3ResponseError
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
+from telemetry.telemetry_schema import is_allowed
 
 class FakeKey:
   name = None
@@ -137,7 +138,7 @@ def list_partitions(bucket, prefix='', level=0, schema=None, include_keys=False,
 
         # Always check the last partition against the allowed values. This ensures
         # we can deal with user-specified prefixes at level 0.
-        if schema is None or schema.is_allowed(partitions[-1], allowed_values[level]):
+        if schema is None or is_allowed(partitions[-1], allowed_values[level]):
             if level >= (num_dimensions - 1):
                 if include_keys:
                     for f in bucket.list(prefix=k.name):
@@ -147,25 +148,6 @@ def list_partitions(bucket, prefix='', level=0, schema=None, include_keys=False,
             else:
                 for prefix in list_partitions(bucket, k.name, level + 1, schema, include_keys, dirs_only):
                     yield prefix
-
-def is_allowed(value, allowed_values):
-    if allowed_values == "*":
-        return True
-    elif isinstance(allowed_values, list):
-        if value in allowed_values:
-            return True
-    elif isinstance(allowed_values, dict):
-        if "min" in allowed_values and value < allowed_values["min"]:
-            return False
-        if "max" in allowed_values and value > allowed_values["max"]:
-            return False
-        return True
-    # Treat a string the same as a single-element array:
-    elif isinstance(allowed_values, basestring):
-        return value == allowed_values
-    # elif it's a regex, apply the regex.
-    # elif it's a special case (date-in-past, uuid, etc)
-    return False
 
 def _list_prefixes(bucket, prefix='', allowed_values="*"):
     if isinstance(allowed_values, list):

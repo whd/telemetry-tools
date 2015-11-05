@@ -42,27 +42,8 @@ class TelemetrySchema:
                 cleaned[i] = self.get_allowed_value(v, self._dimensions[i]["allowed_values"])
         return cleaned
 
-    def is_allowed(self, value, allowed_values):
-        if allowed_values == "*":
-            return True
-        elif isinstance(allowed_values, list):
-            if value in allowed_values:
-                return True
-        elif isinstance(allowed_values, dict):
-            if "min" in allowed_values and value < allowed_values["min"]:
-                return False
-            if "max" in allowed_values and value > allowed_values["max"]:
-                return False
-            return True
-        # Treat a string the same as a single-element array:
-        elif isinstance(allowed_values, basestring):
-            return value == allowed_values
-        # elif it's a regex, apply the regex.
-        # elif it's a special case (date-in-past, uuid, etc)
-        return False
-
     def get_allowed_value(self, value, allowed_values):
-        if self.is_allowed(value, allowed_values):
+        if is_allowed(value, allowed_values):
             return str(value)
         return TelemetrySchema.DISALLOWED_VALUE
 
@@ -129,6 +110,26 @@ class TelemetrySchema:
             raise ValueError("Error: field '{0}' not in schema dimensions".format(field_name))
         else:
             raise ValueError("Error: field '{0}' is dimension {1}, but incoming dims only has {2} items".format(field_name, dim_idx, len(dims)))
+
+
+def is_allowed(value, allowed_values):
+    if allowed_values == "*":
+        return True
+    elif isinstance(allowed_values, list):
+        if value in allowed_values:
+            return True
+    elif isinstance(allowed_values, dict):
+        if "min" in allowed_values and value < allowed_values["min"]:
+            return False
+        if "max" in allowed_values and value > allowed_values["max"]:
+            return False
+        return True
+    # Treat a string the same as a single-element array:
+    elif isinstance(allowed_values, basestring):
+        return value == allowed_values
+    # elif it's a regex, apply the regex.
+    # elif it's a special case (date-in-past, uuid, etc)
+    return False
 
 
 if __name__ == "__main__":

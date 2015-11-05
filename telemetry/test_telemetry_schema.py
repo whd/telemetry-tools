@@ -3,7 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import unittest
-from telemetry_schema import TelemetrySchema
+from telemetry_schema import TelemetrySchema, is_allowed
 
 class TelemetrySchemaTest(unittest.TestCase):
     def setUp(self):
@@ -81,7 +81,7 @@ class TelemetrySchemaTest(unittest.TestCase):
             try:
                 dims = self.schema.get_dimensions("processed", f)
                 for i in range(len(self.allowed_values)):
-                    if not self.schema.is_allowed(dims[i], self.allowed_values[i]):
+                    if not is_allowed(dims[i], self.allowed_values[i]):
                         include = False
                         break
             except ValueError:
@@ -266,20 +266,20 @@ class TelemetrySchemaTest(unittest.TestCase):
         }
         schema = TelemetrySchema(spec)
         allowed = schema.sanitize_allowed_values()
-        self.assertTrue(schema.is_allowed("20130908", allowed[5]))
-        self.assertTrue(schema.is_allowed("20140401", allowed[5]))
-        self.assertTrue(schema.is_allowed("20130909", allowed[5]))
-        self.assertTrue(schema.is_allowed("20140101", allowed[5]))
-        self.assertFalse(schema.is_allowed("20130907", allowed[5]))
-        self.assertFalse(schema.is_allowed("20000000", allowed[5]))
-        self.assertFalse(schema.is_allowed("20140402", allowed[5]))
-        self.assertFalse(schema.is_allowed("99999999", allowed[5]))
+        self.assertTrue(is_allowed("20130908", allowed[5]))
+        self.assertTrue(is_allowed("20140401", allowed[5]))
+        self.assertTrue(is_allowed("20130909", allowed[5]))
+        self.assertTrue(is_allowed("20140101", allowed[5]))
+        self.assertFalse(is_allowed("20130907", allowed[5]))
+        self.assertFalse(is_allowed("20000000", allowed[5]))
+        self.assertFalse(is_allowed("20140402", allowed[5]))
+        self.assertFalse(is_allowed("99999999", allowed[5]))
 
-        self.assertTrue(schema.is_allowed("one_specific_build", allowed[4]))
-        self.assertFalse(schema.is_allowed("two_specific_build", allowed[4]))
-        self.assertFalse(schema.is_allowed("*", allowed[4]))
-        self.assertFalse(schema.is_allowed("one_specific_build ", allowed[4]))
-        self.assertFalse(schema.is_allowed("one-specific-build", allowed[4]))
+        self.assertTrue(is_allowed("one_specific_build", allowed[4]))
+        self.assertFalse(is_allowed("two_specific_build", allowed[4]))
+        self.assertFalse(is_allowed("*", allowed[4]))
+        self.assertFalse(is_allowed("one_specific_build ", allowed[4]))
+        self.assertFalse(is_allowed("one-specific-build", allowed[4]))
 
 if __name__ == "__main__":
     unittest.main()
