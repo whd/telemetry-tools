@@ -25,6 +25,8 @@ class TelemetrySchema:
             allowed = d["allowed_values"]
             if isinstance(allowed, list):
                 allowed = [self.safe_filename(a) for a in allowed]
+            elif allowed != "*" and isinstance(allowed, basestring):
+                allowed = [self.safe_filename(allowed)]
             dims.append(allowed)
         return dims
 
