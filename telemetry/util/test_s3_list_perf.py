@@ -89,37 +89,38 @@ schema_spec = json.loads("""{
 
 submission_dates = [
     ["20151111"], ["20151111", "20151112", "20151113", "20151114", "20151115"]]
-source_names = ["*", ["telemetry"]]
-source_versions = ["*", ["4"]]
+source_names = [["telemetry"], "*"]
+source_versions = [["4"], "*"]
 doc_types = [
+    ["main"],
+    ["saved-session", "main"],
     ["idle-daily", "saved-session", "android-anr-report", "ftu",
      "loop", "flash-video", "main",
-     "activation", "deletion", "crash", "uitour-tag"],
-    ["main"],
-    ["saved-session", "main"]]
+     "activation", "deletion", "crash", "uitour-tag"]]
 app_names = [
-    ["Firefox", "Fennec", "Thunderbird", "FirefoxOS", "B2G"],
-    ["Firefox"]]
+    ["Firefox"],
+    ["Firefox", "Fennec", "Thunderbird", "FirefoxOS", "B2G"]]
 app_update_channels = [
-    "*",
-    ["release", "beta"],
     ["release"],
-    ["beta"]]
-app_versions = ["*", ["42.0"]]
+    ["beta"],
+    ["release", "beta"],
+    "*"]
+app_versions = [["42.0"], "*"]
 app_build_ids = [
-    "*",
     ["20151029151421"],
+    "*"
     # ["20130910201120",
     #  "20150921151815",
     #  "20150928102225",
     #  "20151001142456",
     #  "20151005144425"]
 ]
-telemetry_enabled = ["*", ["true", "false"]]
-sample_ids = ["*", ["42"], ["0", "1", "2", "3", "4"]]
+telemetry_enabled = [["true", "false"], "*"]
+sample_ids = [["42"], ["0", "1", "2", "3", "4"], "*"]
 
 
 def test_list_perf(schema):
+    print("schema={}".format(json.dumps(schema_spec)))
     t1 = time.time()
     schema = TelemetrySchema(schema_spec)
     l = s3util.Loader("/tmp", "net-mozaws-prod-us-west-2-pipeline-data")
@@ -130,7 +131,7 @@ def test_list_perf(schema):
         found.add(f.name)
     t2 = time.time()
     print("found {} objects".format(len(found)))
-    print("schema={}\nTime={}\n".format(json.dumps(schema_spec), t2 - t1))
+    print("time={}\n".format(t2 - t1))
 
 
 def main():
