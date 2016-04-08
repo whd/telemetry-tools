@@ -18,43 +18,6 @@ from google.protobuf.message import DecodeError
 _record_separator = 0x1e
 
 
-class BacktrackableFile:
-    def __init__(self, stream):
-        self._stream = stream
-        self._buffer = StringIO()
-
-    def read(self, size):
-        buffer_data = self._buffer.read(size)
-        to_read = size - len(buffer_data)
-
-        if to_read == 0:
-            return buffer_data
-
-        stream_data = self._stream.read(to_read)
-        self._buffer.write(stream_data)
-
-        return buffer_data + stream_data
-
-    def close(self):
-        self._buffer.close()
-        if type(self._stream) == boto.s3.key.Key:
-            if self._stream.resp:  # Hack! Connections are kept around otherwise!
-                self._stream.resp.close()
-
-            self._stream.close(True)
-        else:
-            self._stream.close()
-
-    def backtrack(self):
-        buffer = self._buffer.getvalue()
-        index = buffer.find(chr(_record_separator), 1)
-
-        self._buffer = StringIO()
-        if index >= 0:
-            self._buffer.write(buffer[index:])
-            self._buffer.seek(0)
-
-
 class UnpackedRecord():
     def __init__(self, raw, header, message=None, error=None):
         self.raw = raw
@@ -168,7 +131,7 @@ def unpack_string(string, **kwargs):
     return unpack(StringIO(string), **kwargs)
 
 
-def unpack(fin, raw=False, verbose=False, strict=False, backtrack=False, try_snappy=True):
+def unpack(fin, raw=False, verbose=False, strict=False, try_snappy=True):
     record_count = 0
     bad_records = 0
     total_bytes = 0
@@ -183,10 +146,6 @@ def unpack(fin, raw=False, verbose=False, strict=False, backtrack=False, try_sna
                 raise e
             elif verbose:
                 print e
-
-            if backtrack and type(e) == DecodeError:
-                fin.backtrack()
-                continue
 
         if r is None:
             break

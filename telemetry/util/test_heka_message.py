@@ -52,28 +52,6 @@ class TestHekaMessage(unittest.TestCase):
                     threw = True
             self.assertEquals(expected_exceptions[t], threw)
 
-    def test_backtracking_with_initial_separator(self):
-        # Test backtracking when the separator appears at the first character
-        w = hm.BacktrackableFile(StringIO("\x1eFOOBAR"))
-        self.assertEquals("\x1eFOOB", w.read(5))
-        w.backtrack()
-        self.assertEquals("AR", w.read(5))
-
-    def test_backtracking_with_mid_separator(self):
-        # Test backtracking when separator was read
-        w = hm.BacktrackableFile(StringIO("FOOBAR\x1eFOOBAR"))
-        self.assertEquals("FOOBAR\x1eFOO", w.read(10))
-        w.backtrack()
-        self.assertEquals("\x1eFOOBAR", w.read(10))
-
-    def test_backtracking_without_separator(self):
-        # Test backtracking when separator wasn't read
-        w = hm.BacktrackableFile(StringIO("FOOBAR\x1eFOOBAR"))
-        self.assertEquals("FOOBA", w.read(5))
-        w.backtrack()
-        self.assertEquals("R\x1eFOO", w.read(5))
-        self.assertEquals("BAR", w.read(5))
-
 
 if __name__ == "__main__":
     unittest.main()
